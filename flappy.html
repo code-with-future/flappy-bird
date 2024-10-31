@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flappy Bird Clone</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background: #70c5ce;
+        overflow: hidden;
+      }
+      canvas {
+        border: 2px solid #000;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // Set canvas size
+      function resizeCanvas() {
+        const aspectRatio = 320 / 480; // Original aspect ratio
+        if (window.innerWidth / window.innerHeight < aspectRatio) {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerWidth / aspectRatio;
+        } else {
+          canvas.height = window.innerHeight;
+          canvas.width = window.innerHeight * aspectRatio;
+        }
+      }
+
+      let bird = {
+        x: 50,
+        y: 150,
+        width: 20,
+        height: 20,
+        gravity: 0.3,
+        lift: -8,
+        velocity: 0,
+      };
+      let pipes = [];
+      let score = 0;
+      let gameOver = false;
+
+      function setup() {
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas(); // Initial resize
+        document.addEventListener("touchstart", handleFlap);
+        document.addEventListener("keydown", handleFlap);
+        pipes.push(new Pipe());
+        setInterval(() => {
+          if (!gameOver) {
+            pipes.push(new Pipe());
+          }
+        }, 2000);
+        requestAnimationFrame(gameLoop);
+      }
+
+      function handleFlap() {
+        if (!gameOver) {
+          bird.velocity += bird.lift;
+        } else {
+          resetGame();
+        }
+      }
+
+      class Pipe {
+        constructor() {
+          this.top = Math.random() * (canvas.height / 2);
+          this.bottom = Math.random() * (canvas.height / 2);
+          this.x = canvas.width;
+          this.width = 40;
+          this.passed = false;
+        }
+
+        draw() {
+          ctx.fillStyle = "#008000";
+          ctx.fillRect(this.x, 0, this.width, this.top);
+          ctx.fillRect(
+            this.x,
+            canvas.height - this.bottom,
+            this.width,
+            this.bottom
+          );
+        }
+
+        update() {
+          this.x -= 1.5; // Slower pipe movement
+          if (this.x < bird.x && !this.passed) {
+            this.passed = true;
+            score++;
+          }
+        }
+
+        isOffScreen() {
+          return this.x < -this.width;
+        }
+
+        hits(bird) {
+          return (
+            (bird.y < this.top ||
+              bird.y + bird.height > canvas.height - this.bottom) &&
+            bird.x + bird.width > this.x &&
+            bird.x < this.x + this.width
+          );
+        }
+      }
+
+      function drawBird() {
+        ctx.fillStyle = "#ffcc00";
+        ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+      }
+
+      function resetGame() {
+        pipes = [];
+        bird.y = 150;
+        bird.velocity = 0;
+        score = 0;
+        gameOver = false;
+        pipes.push(new Pipe());
+        requestAnimationFrame(gameLoop);
+      }
+
+      function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        bird.velocity += bird.gravity;
+        bird.y += bird.velocity;
+
+        if (bird.y > canvas.height || bird.y < 0) {
+          gameOver = true;
+        }
+
+        pipes.forEach((pipe, index) => {
+          pipe.update();
+          pipe.draw();
+          if (pipe.hits(bird)) {
+            gameOver = true;
+          }
+          if (pipe.isOffScreen()) {
+            pipes.splice(index, 1);
+          }
+        });
+
+        drawBird();
+
+        ctx.fillStyle = "#000";
+        ctx.font = "20px Arial";
+        ctx.fillText("Score: " + score, 10, 20);
+
+        if (gameOver) {
+          ctx.fillText("Game Over!", 10, canvas.height / 2);
+        } else {
+          requestAnimationFrame(gameLoop);
+        }
+      }
+
+      setup();
+    </script>
+  </body>
+</html>
